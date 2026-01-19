@@ -1,0 +1,59 @@
+- name: Add NodeSource repo
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+
+
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
+    update_cache: yes
+
+
+- name: Project clone
+  git:
+    repo: "git@gitlab.slurm.io:edu/devops-cross-project/slurmtalks.git"
+    dest: /opt/slurmtalks
+    version: main
+    force: yes
+- name: Copy .env
+  template:
+    src: env.j2
+    dest: /opt/slurmtalks/frontend-service/.env
+
+- name: Install dependency (node_modules)
+  shell: |
+    cd /opt/slurmtalks/frontend-service
+    npm install
+  args:
+    chdir: /opt/slurmtalks/frontend-service
+
+- name: App build
+  shell: |
+    cd /opt/slurmtalks/frontend-service
+    npm run build
+  args:
+    chdir: /opt/slurmtalks/frontend-service
+
+- name: Unit setup
+  copy:
+    dest: /etc/systemd/system/frontend.service
+    content: |
+      [Unit]
+      Description=Frontend Service
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/bin/npm start
+      WorkingDirectory=/opt/slurmtalks/frontend-service
+      Restart=always
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Frontend setup
+  systemd:
+    name: frontend
+    state: restarted
+    enabled: yes

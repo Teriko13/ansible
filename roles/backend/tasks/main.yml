@@ -1,0 +1,62 @@
+- name: Dependency install
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - build-essential
+    - gcc
+    - libc6-dev
+    - wget
+
+- name: Go download
+  get_url:
+    url: https://go.dev/dl/go1.24.0.linux-amd64.tar.gz
+    dest: /tmp/go.tar.gz
+
+- name: Go install
+  unarchive:
+    src: /tmp/go.tar.gz
+    dest: /usr/local
+    remote_src: yes
+
+- name: Go setup
+  lineinfile:
+    path: /etc/profile
+    line: 'export PATH=$PATH:/usr/local/go/bin'
+    state: present
+
+- name: Repository clone
+  git:
+    repo: "git@gitlab.slurm.io:edu/devops-cross-project/slurmtalks.git"
+    dest: /opt/slurmtalks
+    version: main
+    force: yes
+
+- name: Copy .env
+  template:
+    src: env.j2
+    dest: /opt/slurmtalks/backend-service/.env
+
+- name: Unit setup
+  copy:
+    dest: /etc/systemd/system/backend.service
+    content: |
+      [Unit]
+      Description=Go Backend Service
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/local/go/bin/go run /opt/slurmtalks/backend-service/main.go
+      WorkingDirectory=/opt/slurmtalks/backend-service
+      Restart=always
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Go restart
+  systemd:
+    name: backend
+    state: restarted
+    enabled: yes

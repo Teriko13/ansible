@@ -1,0 +1,12 @@
+- name: Package list update
+  apt:
+    update_cache: yes
+
+- name: Package update
+  apt:
+    upgrade: yes
+
+- name: Git install
+  apt:
+    name: git
+    state: present

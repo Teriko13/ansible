@@ -1,0 +1,9 @@
+- name: Install PostgreSQL
+  apt:
+    name: postgresql
+    state: present
+    update_cache: yes
+
+- name: Setup password for postgres
+  shell: |
+    sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '4444';"
